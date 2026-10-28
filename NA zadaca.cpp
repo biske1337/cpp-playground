@@ -27,7 +27,7 @@ class Vector{
    }
 
    Vector(std::initializer_list<double> l) : a(l) {
-      if(std::size(l)==0) throw std::range_error("Bad dimension");
+      if(l.size()==0) throw std::range_error("Bad dimension");
    }
    int NElems() const {
       return a.size();
