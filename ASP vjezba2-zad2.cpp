@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <cassert>
 
+//kom
 class MiniNizLista {
     int* elementi;
     int kapacitet;
