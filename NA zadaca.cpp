@@ -26,9 +26,8 @@ class Vector{
     a.resize(n);
    }
 
-   Vector(std::initializer_list<double> l) {
+   Vector(std::initializer_list<double> l) : a(l) {
       if(std::size(l)==0) throw std::range_error("Bad dimension");
-      for(auto b: l) a.push_back(b);
    }
    int NElems() const {
       return a.size();
