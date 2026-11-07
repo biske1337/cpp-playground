@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 
 template <typename Tip>
@@ -47,9 +48,15 @@ class NizLista : public Lista<Tip>
     }
     NizLista(const NizLista& l) : kapacitet(l.kapacitet), broj_elemanata(l.broj_elemanata), trenutni(l.trenutni){
         elementi= new Tip[kapacitet];
-        for(int i=0;i<l.broj_elemanata++){
+
+        try{ 
+          for(int i=0;i<l.broj_elemanata;i++){
             elementi[i]=l.elementi[i];
-        }
+          }
+       }catch(...){
+        delete[] elementi;
+        throw;
+       } 
     }
 
     int brojElemenata() const override {
@@ -84,11 +91,11 @@ class NizLista : public Lista<Tip>
         return false;
     }
     void pocetak() override {
-        if(broj_elemanata==0 || trenutni<0) throw std::logic_error("Lista je prazna");
+        if(broj_elemanata==0 ) throw std::logic_error("Lista je prazna");
         trenutni=0;
     }
     void kraj() override {
-        if(broj_elemanata==0 || trenutni<0) throw std::logic_error("Lista je prazna");
+        if(broj_elemanata==0) throw std::logic_error("Lista je prazna");
         trenutni=broj_elemanata-1;
     }
     void obrisi() override {
@@ -139,7 +146,7 @@ class NizLista : public Lista<Tip>
             elementi[0]=el;
             trenutni=0;
         }else{
-            for(int i=broj_elemanata;i>trenutni+1;i++){
+            for(int i=broj_elemanata;i>trenutni;i--){
                 elementi[i]=elementi[i-1];
             }
             elementi[trenutni]=el;
@@ -179,6 +186,204 @@ class NizLista : public Lista<Tip>
 
 /**/
 
+// trenutni const bez const
+// prethodni sljedeci bool
+// pocetak kraj void
+// obrisi dodajIspred dodajIza operator[] operator []
+
+
+template <typename Tip>
+
+class JednostrukaLista : public Lista<Tip>{
+    struct Cvor{
+        Tip informacija;
+        Cvor* sljedeci;
+        Cvor(const Tip& informacija,Cvor *sljedeci=nullptr) : informacija(informacija), sljedeci(sljedeci) {}
+    };
+    int broj_el;
+    Cvor *prvi;  // morao preimenovati zbog imena metoda
+    Cvor *trenutni;
+    Cvor *zadnji;
+    
+  public: 
+  JednostrukaLista() : broj_el(0), prvi(nullptr),trenutni(nullptr),zadnji(nullptr) {}
+  ~JednostrukaLista(){
+    while(prvi!=nullptr){
+        Cvor *pomocni=prvi;
+        prvi=prvi->sljedeci;
+        delete pomocni;
+    }
+  }
+  JednostrukaLista(const JednostrukaLista& l) : broj_el(0), prvi(nullptr), trenutni(nullptr), zadnji(nullptr) {
+    Cvor* pomocni = l.prvi;
+    try {
+        while(pomocni != nullptr) {
+            Cvor* novi = new Cvor(pomocni->informacija);
+            if(prvi==nullptr) {
+                prvi = novi;
+                trenutni = novi;
+                zadnji = novi;
+            } else {
+                zadnji->sljedeci = novi;
+                zadnji = novi;
+            }
+            if(pomocni==l.trenutni) trenutni = novi;
+
+            broj_el++;
+            pomocni = pomocni->sljedeci;
+        }
+    }
+    catch(...) {
+        while(prvi != nullptr) {
+            Cvor* brise = prvi;
+            prvi = prvi->sljedeci;
+            delete brise;
+        }
+        throw;
+    }
+  }
+
+  int brojElemenata() const override{
+    return broj_el;
+  }
+  Tip& trenutni() override{
+    if(trenutni==nullptr) throw std::logic_error("Lista je prazna");
+    return trenutni->informacija;
+  }
+  const Tip& trenutni() const override {
+    if(trenutni==nullptr) throw std::logic_error("Lista je prazna");
+    return trenutni->informacija;
+  }
+  bool prethodni() override {
+    if(broj_el==0) throw std::logic_error("Lista je prazna");
+    // ideja je da preusmjerim trenutni na prethodni tako sto cu napravit pomocni cvor
+    if(prvi==trenutni) return false;
+    Cvor *pomocni=prvi;
+    while(pomocni->sljedeci!=trenutni){
+        pomocni=pomocni->sljedeci;
+    }
+    trenutni=pomocni;
+    return true;
+  }
+  bool sljedeci() override{
+    if(broj_el==0) throw std::logic_error("Lista je prazna");
+    if(zadnji==trenutni) return false;
+    trenutni=trenutni->sljedeci;
+    return true;
+  }
+  void kraj() override{
+    if(broj_el==0) throw std::logic_error("Lista je prazna");
+    trenutni=zadnji;
+  }
+  void pocetak() override{
+    if(broj_el==0) throw std::logic_error("Lista je prazna");
+    trenutni=prvi;
+  }
+  void obrisi() override{
+    if(trenutni==nullptr) throw std::logic_error("Lista je prazna");
+    Cvor *pomocni=trenutni;
+    if(trenutni==prvi){
+        prvi=prvi->sljedeci;
+        trenutni=prvi;
+        if(prvi==nullptr) zadnji=nullptr;
+    }else{
+        Cvor *prethodni=prvi;
+        while(prethodni->sljedeci!=trenutni){
+            prethodni=prethodni->sljedeci;
+        }
+        
+        if(trenutni==zadnji){
+            zadnji=prethodni;
+            trenutni=prethodni;
+        }else{
+            trenutni=trenutni->sljedeci;
+        }
+        prethodni->sljedeci=pomocni->sljedeci;
+
+    }
+    delete pomocni;
+    broj_el--;
+  }
+  void dodajIza(const Tip &vrijednost) override{
+    if(trenutni==nullptr){ // ako je sve prazno
+        trenutni=new Cvor(vrijednost);
+        zadnji=trenutni;
+        prvi=zadnji;
+        broj_el++;
+        return;
+    }
+    Cvor *novi= new Cvor(vrijednost,trenutni->sljedeci);
+    
+    trenutni->sljedeci=novi;
+    if(trenutni==zadnji) zadnji=novi;
+    broj_el++;
+  }
+  void dodajIspred(const Tip &vrijednost) override{
+
+    if(trenutni==nullptr){ // ako je sve prazno
+        trenutni=new Cvor(vrijednost);
+        prvi=trenutni;
+        zadnji=trenutni;
+        broj_el++;
+        return;
+    }
+    Cvor *novi=new Cvor(vrijednost,trenutni);
+    if(trenutni==prvi) prvi=novi;
+    else{
+        Cvor *prethodni=prvi;
+        while(prethodni->sljedeci != trenutni){
+            prethodni=prethodni->sljedeci;
+        }
+        prethodni->sljedeci=novi;
+    }
+    broj_el++;
+  }
+  Tip& operator[](int i) override {
+    if(i<0 || i>=broj_el) throw std::logic_error("Nevalidan indeks");
+
+    Cvor* pomocni = prvi;
+
+    for(int j=0;j<i;j++){
+        pomocni=pomocni->sljedeci;
+    }
+    return pomocni->informacija;
+  }
+  const Tip& operator[](int i) const override {
+    if(i<0 || i>=broj_el) throw std::logic_error("Nevalidan indeks");
+
+    const Cvor* pomocni = prvi;
+
+    for(int j=0;j<i;j++){
+        pomocni=pomocni->sljedeci;
+    }
+    return pomocni->informacija;
+  }
+  
+  JednostrukaLista& operator=(const JednostrukaLista& l) {
+    if(this == &l) return *this;
+
+    JednostrukaLista kopija(l);
+
+    std::swap(prvi, kopija.prvi);
+    std::swap(trenutni, kopija.trenutni);
+    std::swap(zadnji, kopija.zadnji);
+    std::swap(broj_el, kopija.broj_el);
+
+    return *this;
+}
+
+
+
+
+
+
+  
+
+
+
+
+
+};
 
 
 
